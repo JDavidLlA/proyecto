@@ -50,6 +50,13 @@ class TaskController extends Controller
 
         Gate::authorize('view', $task);
 
+        $task->load([
+            'comments' => function ($query) {
+                $query->latest();
+            },
+            'comments.user',
+        ]);
+
         return view('tasks.show', compact('project', 'task'));
     }
 
