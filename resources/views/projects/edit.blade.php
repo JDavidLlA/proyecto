@@ -55,20 +55,32 @@
                 <label for="estado">Estado</label>
 
                 <select name="estado" id="estado" required>
-                    <option value="pendiente" @selected(old('estado', $project->estado) === 'pendiente')>
-                        Pendiente
-                    </option>
-
-                    <option value="en_proceso" @selected(old('estado', $project->estado) === 'en_proceso')>
-                        En proceso
-                    </option>
-
-                    <option value="completado" @selected(old('estado', $project->estado) === 'completado')>
-                        Completado
-                    </option>
+                    @foreach ($estados as $valor => $texto)
+                        <option value="{{ $valor }}" @selected(old('estado', $project->estado) === $valor)>
+                            {{ $texto }}
+                        </option>
+                    @endforeach
                 </select>
 
                 @error('estado')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
+
+            <div>
+                <label for="prioridad">Prioridad</label>
+
+                <select name="prioridad" id="prioridad" required>
+                    @foreach ($prioridades as $valor => $texto)
+                        <option value="{{ $valor }}" @selected(old('prioridad', $project->prioridad ?? 'media') === $valor)>
+                            {{ $texto }}
+                        </option>
+                    @endforeach
+                </select>
+
+                @error('prioridad')
                     <div class="form-error">
                         {{ $message }}
                     </div>

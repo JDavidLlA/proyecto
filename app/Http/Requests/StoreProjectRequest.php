@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProjectRequest extends FormRequest
 {
@@ -16,7 +18,8 @@ class StoreProjectRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],
-            'estado' => ['required', 'in:pendiente,en_proceso,completado'],
+            'estado' => ['required', Rule::in(['activo', 'pausado', 'finalizado'])],
+            'prioridad' => ['required', Rule::in(Project::PRIORIDADES)],
         ];
     }
 
@@ -26,6 +29,16 @@ class StoreProjectRequest extends FormRequest
             'nombre' => 'nombre del proyecto',
             'descripcion' => 'descripción',
             'estado' => 'estado',
+            'prioridad' => 'prioridad',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'prioridad.required' => 'Debes seleccionar una prioridad.',
+            'prioridad.in' => 'La prioridad seleccionada no es válida.',
+            'estado.in' => 'El estado seleccionado no es válido.',
         ];
     }
 }

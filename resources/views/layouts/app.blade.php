@@ -110,6 +110,18 @@
             margin-bottom: 22px;
         }
 
+        .page-card.priority-high,
+        .card.priority-high {
+            border-left: 6px solid #f59e0b;
+            background: #fffbeb;
+        }
+
+        .page-card.priority-urgent,
+        .card.priority-urgent {
+            border-left: 6px solid #dc2626;
+            background: #fef2f2;
+        }
+
         .page-title {
             font-size: 28px;
             margin-bottom: 8px;
@@ -244,6 +256,24 @@
             background: #f9fafb;
         }
 
+        tr.priority-high {
+            background: #fffbeb;
+            border-left: 5px solid #f59e0b;
+        }
+
+        tr.priority-urgent {
+            background: #fef2f2;
+            border-left: 5px solid #dc2626;
+        }
+
+        tr.priority-high:hover {
+            background: #fef3c7;
+        }
+
+        tr.priority-urgent:hover {
+            background: #fee2e2;
+        }
+
         input,
         textarea,
         select {
@@ -290,6 +320,7 @@
             border-radius: 999px;
             font-size: 12px;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .badge-blue {
@@ -307,9 +338,33 @@
             color: #b45309;
         }
 
+        .badge-orange {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
         .badge-red {
             background: #fee2e2;
             color: #b91c1c;
+        }
+
+        .badge-gray {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .priority-message-high {
+            margin-top: 4px;
+            color: #d97706;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .priority-message-urgent {
+            margin-top: 4px;
+            color: #dc2626;
+            font-size: 13px;
+            font-weight: bold;
         }
 
         .footer {

@@ -4,30 +4,84 @@
 
 @section('content')
     @php
-        $projectEstado = $project->estado ?? 'sin_estado';
+        $estadosProyecto = [
+            'activo' => 'Activo',
+            'pausado' => 'Pausado',
+            'finalizado' => 'Finalizado',
+        ];
 
-        $projectBadgeClass = match($projectEstado) {
-            'pendiente' => 'badge-yellow',
-            'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
-            'completado', 'completada', 'finalizado', 'finalizada' => 'badge-green',
-            'cancelado', 'cancelada' => 'badge-red',
+        $estadosTarea = [
+            'pendiente' => 'Pendiente',
+            'en_progreso' => 'En progreso',
+            'completada' => 'Completada',
+        ];
+
+        $prioridades = [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        $projectEstado = $project->estado ?? 'activo';
+
+        $projectEstadoBadgeClass = match ($projectEstado) {
+            'activo' => 'badge-green',
+            'pausado' => 'badge-yellow',
+            'finalizado' => 'badge-blue',
             default => 'badge-blue',
         };
 
-        $projectEstadoTexto = ucfirst(str_replace('_', ' ', $projectEstado));
+        $projectEstadoTexto = $estadosProyecto[$projectEstado] ?? ucfirst(str_replace('_', ' ', $projectEstado));
+
+        $projectPrioridad = $project->prioridad ?? 'media';
+
+        $projectPrioridadBadgeClass = match ($projectPrioridad) {
+            'baja' => 'badge-green',
+            'media' => 'badge-blue',
+            'alta' => 'badge-yellow',
+            'urgente' => 'badge-red',
+            default => 'badge-blue',
+        };
+
+        $projectPrioridadTexto = $prioridades[$projectPrioridad] ?? ucfirst($projectPrioridad);
+
+        $projectDestacado = in_array($projectPrioridad, ['alta', 'urgente'], true);
+        $proyectoFinalizado = $projectEstado === 'finalizado';
     @endphp
 
-    <div class="page-card">
+    <div class="page-card" @if ($projectDestacado) style="border-left: 6px solid #f97316; background: #fff7ed;" @endif>
         <h1 class="page-title">{{ $project->nombre }}</h1>
 
         <p class="page-subtitle">
             Detalle general del proyecto seleccionado.
         </p>
 
+        @if ($proyectoFinalizado)
+            <p style="color: #15803d; font-weight: bold;">
+                Este proyecto ya fue finalizado.
+            </p>
+        @elseif ($projectPrioridad === 'urgente')
+            <p style="color: #dc2626; font-weight: bold;">
+                Este proyecto requiere atención urgente.
+            </p>
+        @elseif ($projectPrioridad === 'alta')
+            <p style="color: #d97706; font-weight: bold;">
+                Este proyecto tiene prioridad alta.
+            </p>
+        @endif
+
         <p>
             <strong>Estado:</strong>
-            <span class="badge {{ $projectBadgeClass }}">
+            <span class="badge {{ $projectEstadoBadgeClass }}">
                 {{ $projectEstadoTexto }}
+            </span>
+        </p>
+
+        <p style="margin-top: 12px;">
+            <strong>Prioridad:</strong>
+            <span class="badge {{ $projectPrioridadBadgeClass }}">
+                {{ $projectPrioridadTexto }}
             </span>
         </p>
 
@@ -36,12 +90,65 @@
             {{ $project->descripcion ?? 'Sin descripción' }}
         </p>
 
+        @if ($project->owner)
+            <p style="margin-top: 12px;">
+                <strong>Responsable:</strong>
+                {{ $project->owner->name }}
+
+                <span style="color: #6b7280;">
+                    — {{ $project->owner->email }}
+                </span>
+            </p>
+        @endif
+
+        @if ($proyectoFinalizado)
+            <div style="margin-top: 14px; padding: 14px; border-radius: 10px; background: #dcfce7; border-left: 5px solid #16a34a;">
+                <p>
+                    <strong>Proyecto finalizado por:</strong>
+
+                    @if ($project->completedBy)
+                        {{ $project->completedBy->name }}
+
+                        <span style="color: #6b7280;">
+                            — {{ $project->completedBy->email }}
+                        </span>
+                    @else
+                        Usuario no registrado
+                    @endif
+                </p>
+
+                <p style="margin-top: 8px;">
+                    <strong>Fecha de finalización:</strong>
+                    {{ $project->completed_at ? $project->completed_at->format('d/m/Y H:i') : 'Sin fecha registrada' }}
+                </p>
+            </div>
+        @endif
+
         <p style="margin-top: 12px;">
             <strong>Fecha de creación:</strong>
             {{ $project->created_at?->format('d/m/Y H:i') }}
         </p>
 
+        <p style="margin-top: 12px;">
+            <strong>Última actualización:</strong>
+            {{ $project->updated_at?->format('d/m/Y H:i') }}
+        </p>
+
         <div class="actions" style="margin-top: 18px;">
+            @can('complete', $project)
+                <form action="{{ route('projects.complete', $project) }}"
+                      method="POST"
+                      data-confirm-delete="true"
+                      data-confirm-message="¿Seguro que deseas finalizar este proyecto?">
+                    @csrf
+                    @method('PATCH')
+
+                    <button type="submit" class="btn btn-success">
+                        Finalizar proyecto
+                    </button>
+                </form>
+            @endcan
+
             @can('update', $project)
                 <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
                     Editar proyecto
@@ -104,6 +211,7 @@
                             <th>ID</th>
                             <th>Título</th>
                             <th>Estado</th>
+                            <th>Prioridad</th>
                             <th>Fecha límite</th>
                             <th>Acciones</th>
                         </tr>
@@ -112,34 +220,83 @@
                     <tbody>
                         @foreach ($project->tasks as $task)
                             @php
-                                $taskEstado = $task->estado ?? 'sin_estado';
+                                $taskEstado = $task->estado ?? 'pendiente';
 
-                                $taskBadgeClass = match($taskEstado) {
+                                $taskEstadoBadgeClass = match ($taskEstado) {
                                     'pendiente' => 'badge-yellow',
-                                    'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
-                                    'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
-                                    'cancelada', 'cancelado' => 'badge-red',
+                                    'en_progreso' => 'badge-blue',
+                                    'completada' => 'badge-green',
                                     default => 'badge-blue',
                                 };
 
-                                $taskEstadoTexto = ucfirst(str_replace('_', ' ', $taskEstado));
+                                $taskEstadoTexto = $estadosTarea[$taskEstado] ?? ucfirst(str_replace('_', ' ', $taskEstado));
+
+                                $taskPrioridad = $task->prioridad ?? 'media';
+
+                                $taskPrioridadBadgeClass = match ($taskPrioridad) {
+                                    'baja' => 'badge-green',
+                                    'media' => 'badge-blue',
+                                    'alta' => 'badge-yellow',
+                                    'urgente' => 'badge-red',
+                                    default => 'badge-blue',
+                                };
+
+                                $taskPrioridadTexto = $prioridades[$taskPrioridad] ?? ucfirst($taskPrioridad);
+
+                                $taskDestacada = in_array($taskPrioridad, ['alta', 'urgente'], true);
                             @endphp
 
-                            <tr>
+                            <tr @if ($taskDestacada) style="background: #fff7ed; border-left: 5px solid #f97316;" @endif>
                                 <td>{{ $task->id }}</td>
 
                                 <td>
                                     <strong>{{ $task->titulo ?? 'Sin título' }}</strong>
+
+                                    @if ($taskPrioridad === 'urgente')
+                                        <div style="margin-top: 4px; color: #dc2626; font-size: 13px; font-weight: bold;">
+                                            Atención urgente
+                                        </div>
+                                    @elseif ($taskPrioridad === 'alta')
+                                        <div style="margin-top: 4px; color: #d97706; font-size: 13px; font-weight: bold;">
+                                            Prioridad alta
+                                        </div>
+                                    @endif
+
+                                    @if ($task->assignee)
+                                        <div style="margin-top: 4px; color: #6b7280; font-size: 13px;">
+                                            Asignado a: {{ $task->assignee->name }}
+                                        </div>
+                                    @else
+                                        <div style="margin-top: 4px; color: #6b7280; font-size: 13px;">
+                                            Sin asignar
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td>
-                                    <span class="badge {{ $taskBadgeClass }}">
+                                    <span class="badge {{ $taskEstadoBadgeClass }}">
                                         {{ $taskEstadoTexto }}
+                                    </span>
+
+                                    @if ($taskEstado === 'completada')
+                                        <div style="margin-top: 4px; color: #15803d; font-size: 13px; font-weight: bold;">
+                                            @if ($task->completedBy)
+                                                Completada por: {{ $task->completedBy->name }}
+                                            @else
+                                                Completada
+                                            @endif
+                                        </div>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    <span class="badge {{ $taskPrioridadBadgeClass }}">
+                                        {{ $taskPrioridadTexto }}
                                     </span>
                                 </td>
 
                                 <td>
-                                    {{ $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('d/m/Y') : 'Sin fecha' }}
+                                    {{ $task->due_date ? $task->due_date->format('d/m/Y') : 'Sin fecha' }}
                                 </td>
 
                                 <td>
@@ -195,6 +352,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Correo</th>
+                            <th>Rol en proyecto</th>
                         </tr>
                     </thead>
 
@@ -206,6 +364,10 @@
                                 </td>
 
                                 <td>{{ $member->email }}</td>
+
+                                <td>
+                                    {{ ucfirst($member->pivot->project_role ?? 'miembro') }}
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

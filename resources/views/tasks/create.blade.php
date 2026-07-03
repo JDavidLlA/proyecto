@@ -3,6 +3,23 @@
 @section('title', 'Nueva tarea')
 
 @section('content')
+    @php
+        $estados = $estados ?? [
+            'pendiente' => 'Pendiente',
+            'en_progreso' => 'En progreso',
+            'completada' => 'Completada',
+        ];
+
+        $prioridades = $prioridades ?? [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        $members = $members ?? collect();
+    @endphp
+
     <div class="page-card">
         <h1 class="page-title">Nueva tarea</h1>
 
@@ -14,6 +31,20 @@
             <strong>Proyecto:</strong>
             {{ $project->nombre ?? $project->titulo ?? $project->name ?? ('Proyecto #' . $project->id) }}
         </p>
+
+        @if ($members->count() === 0)
+            <p style="margin-top: 12px; color: #b45309; font-weight: bold;">
+                Este proyecto todavía no tiene miembros asignados. Primero asigna usuarios al proyecto para poder asignarles tareas.
+            </p>
+
+            @can('update', $project)
+                <div class="actions" style="margin-top: 12px;">
+                    <a href="{{ route('projects.members.index', $project) }}" class="btn btn-warning">
+                        Asignar miembros
+                    </a>
+                </div>
+            @endcan
+        @endif
     </div>
 
     <div class="page-card">
@@ -51,20 +82,37 @@
             </div>
 
             <div>
+                <label for="assignee_id">Asignar a</label>
+
+                <select name="assignee_id" id="assignee_id">
+                    <option value="">Sin asignar</option>
+
+                    @foreach ($members as $member)
+                        <option value="{{ $member->id }}" @selected(old('assignee_id') == $member->id)>
+                            {{ $member->name }} - {{ $member->email }}
+                            @if ($member->pivot?->project_role)
+                                ({{ ucfirst($member->pivot->project_role) }})
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+
+                @error('assignee_id')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
+
+            <div>
                 <label for="estado">Estado</label>
 
                 <select name="estado" id="estado" required>
-                    <option value="pendiente" {{ old('estado') === 'pendiente' ? 'selected' : '' }}>
-                        Pendiente
-                    </option>
-
-                    <option value="en_proceso" {{ old('estado') === 'en_proceso' ? 'selected' : '' }}>
-                        En proceso
-                    </option>
-
-                    <option value="completada" {{ old('estado') === 'completada' ? 'selected' : '' }}>
-                        Completada
-                    </option>
+                    @foreach ($estados as $valor => $texto)
+                        <option value="{{ $valor }}" @selected(old('estado', 'pendiente') === $valor)>
+                            {{ $texto }}
+                        </option>
+                    @endforeach
                 </select>
 
                 @error('estado')
@@ -75,14 +123,32 @@
             </div>
 
             <div>
-                <label for="fecha_limite">Fecha límite</label>
+                <label for="prioridad">Prioridad</label>
+
+                <select name="prioridad" id="prioridad" required>
+                    @foreach ($prioridades as $valor => $texto)
+                        <option value="{{ $valor }}" @selected(old('prioridad', 'media') === $valor)>
+                            {{ $texto }}
+                        </option>
+                    @endforeach
+                </select>
+
+                @error('prioridad')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
+
+            <div>
+                <label for="due_date">Fecha límite</label>
 
                 <input type="date"
-                       name="fecha_limite"
-                       id="fecha_limite"
-                       value="{{ old('fecha_limite') }}">
+                       name="due_date"
+                       id="due_date"
+                       value="{{ old('due_date') }}">
 
-                @error('fecha_limite')
+                @error('due_date')
                     <div class="form-error">
                         {{ $message }}
                     </div>

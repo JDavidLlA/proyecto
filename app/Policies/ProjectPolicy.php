@@ -33,18 +33,57 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $user->can('projects.update') && (
-            $user->hasRole('lider') ||
-            $this->belongsToProject($user, $project)
-        );
+        if (! $user->can('projects.update')) {
+            return false;
+        }
+
+        if ($this->ownsProject($user, $project)) {
+            return true;
+        }
+
+        if ($user->hasRole('lider') && $this->isProjectLeader($user, $project)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function delete(User $user, Project $project): bool
     {
-        return $user->can('projects.delete') && (
-            $user->hasRole('lider') ||
-            $this->ownsProject($user, $project)
-        );
+        if (! $user->can('projects.delete')) {
+            return false;
+        }
+
+        if ($this->ownsProject($user, $project)) {
+            return true;
+        }
+
+        if ($user->hasRole('lider') && $this->isProjectLeader($user, $project)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function complete(User $user, Project $project): bool
+    {
+        if (! $user->can('projects.update')) {
+            return false;
+        }
+
+        if ($project->estado === 'finalizado') {
+            return false;
+        }
+
+        if ($user->hasRole('colaborador') || $user->hasRole('invitado')) {
+            return false;
+        }
+
+        if ($user->hasRole('lider') && $this->isProjectLeader($user, $project)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function restore(User $user, Project $project): bool
@@ -59,8 +98,17 @@ class ProjectPolicy
 
     private function ownsProject(User $user, Project $project): bool
     {
-        return ! is_null($project->getAttribute('user_id'))
-            && (int) $project->getAttribute('user_id') === (int) $user->id;
+        if (! is_null($project->getAttribute('owner_id'))
+            && (int) $project->getAttribute('owner_id') === (int) $user->id) {
+            return true;
+        }
+
+        if (! is_null($project->getAttribute('user_id'))
+            && (int) $project->getAttribute('user_id') === (int) $user->id) {
+            return true;
+        }
+
+        return false;
     }
 
     private function belongsToProject(User $user, Project $project): bool
@@ -76,5 +124,21 @@ class ProjectPolicy
         }
 
         return false;
+    }
+
+    private function isProjectLeader(User $user, Project $project): bool
+    {
+        if ($this->ownsProject($user, $project)) {
+            return true;
+        }
+
+        if (! method_exists($project, 'members')) {
+            return false;
+        }
+
+        return $project->members()
+            ->where('users.id', $user->id)
+            ->wherePivot('project_role', 'lider')
+            ->exists();
     }
 }

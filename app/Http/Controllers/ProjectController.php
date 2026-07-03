@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
-use App\Models\Task;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -22,8 +21,28 @@ class ProjectController extends Controller
 
         $buscar = trim((string) $request->input('buscar', ''));
         $estado = $request->input('estado');
+        $prioridad = $request->input('prioridad');
 
-        $query = Project::query()->latest();
+        $estados = [
+            'activo' => 'Activo',
+            'pausado' => 'Pausado',
+            'finalizado' => 'Finalizado',
+        ];
+
+        $prioridades = [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        $query = Project::query()
+            ->with('owner')
+            ->latest();
+
+        if (method_exists(Project::class, 'completedBy')) {
+            $query->with('completedBy');
+        }
 
         if (! $user->hasRole('admin')) {
             $tieneFiltroDePropiedad =
@@ -60,22 +79,62 @@ class ProjectController extends Controller
             });
         }
 
-        if (! empty($estado)) {
+        if (! empty($estado) && array_key_exists($estado, $estados)) {
             $query->where('estado', $estado);
+        }
+
+        if (
+            ! empty($prioridad) &&
+            array_key_exists($prioridad, $prioridades) &&
+            Schema::hasColumn('projects', 'prioridad')
+        ) {
+            $query->where('prioridad', $prioridad);
+        }
+
+        if (Schema::hasColumn('projects', 'prioridad')) {
+            $query->orderByRaw("
+                CASE prioridad
+                    WHEN 'urgente' THEN 1
+                    WHEN 'alta' THEN 2
+                    WHEN 'media' THEN 3
+                    WHEN 'baja' THEN 4
+                    ELSE 5
+                END
+            ");
         }
 
         $projects = $query
             ->paginate(10)
             ->withQueryString();
 
-        return view('projects.index', compact('projects', 'buscar', 'estado'));
+        return view('projects.index', compact(
+            'projects',
+            'buscar',
+            'estado',
+            'prioridad',
+            'estados',
+            'prioridades'
+        ));
     }
 
     public function create(): View
     {
         Gate::authorize('projects.create');
 
-        return view('projects.create');
+        $estados = [
+            'activo' => 'Activo',
+            'pausado' => 'Pausado',
+            'finalizado' => 'Finalizado',
+        ];
+
+        $prioridades = [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        return view('projects.create', compact('estados', 'prioridades'));
     }
 
     public function store(StoreProjectRequest $request): RedirectResponse
@@ -89,11 +148,24 @@ class ProjectController extends Controller
         $project->nombre = $data['nombre'];
         $project->descripcion = $data['descripcion'] ?? null;
         $project->estado = $data['estado'];
-
         $project->owner_id = $request->user()->id;
+
+        if (Schema::hasColumn('projects', 'prioridad')) {
+            $project->prioridad = $data['prioridad'] ?? 'media';
+        }
 
         if (Schema::hasColumn('projects', 'user_id')) {
             $project->user_id = $request->user()->id;
+        }
+
+        if (($data['estado'] ?? null) === 'finalizado') {
+            if (Schema::hasColumn('projects', 'completed_by')) {
+                $project->completed_by = $request->user()->id;
+            }
+
+            if (Schema::hasColumn('projects', 'completed_at')) {
+                $project->completed_at = now();
+            }
         }
 
         $project->save();
@@ -113,8 +185,40 @@ class ProjectController extends Controller
     {
         Gate::authorize('view', $project);
 
+        if (method_exists(Project::class, 'completedBy')) {
+            $project->load('completedBy');
+        }
+
+        if (method_exists(Project::class, 'owner')) {
+            $project->load('owner');
+        }
+
         if (method_exists(Project::class, 'tasks')) {
-            $project->load('tasks');
+            $project->load([
+                'tasks' => function ($query) {
+                    if (method_exists(\App\Models\Task::class, 'assignee')) {
+                        $query->with('assignee');
+                    }
+
+                    if (method_exists(\App\Models\Task::class, 'completedBy')) {
+                        $query->with('completedBy');
+                    }
+
+                    if (Schema::hasColumn('tasks', 'prioridad')) {
+                        $query->orderByRaw("
+                            CASE prioridad
+                                WHEN 'urgente' THEN 1
+                                WHEN 'alta' THEN 2
+                                WHEN 'media' THEN 3
+                                WHEN 'baja' THEN 4
+                                ELSE 5
+                            END
+                        ");
+                    }
+
+                    $query->latest();
+                },
+            ]);
         }
 
         if (method_exists(Project::class, 'members')) {
@@ -128,7 +232,20 @@ class ProjectController extends Controller
     {
         Gate::authorize('update', $project);
 
-        return view('projects.edit', compact('project'));
+        $estados = [
+            'activo' => 'Activo',
+            'pausado' => 'Pausado',
+            'finalizado' => 'Finalizado',
+        ];
+
+        $prioridades = [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        return view('projects.edit', compact('project', 'estados', 'prioridades'));
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
@@ -149,11 +266,56 @@ class ProjectController extends Controller
             $project->estado = $data['estado'];
         }
 
+        if (Schema::hasColumn('projects', 'prioridad')) {
+            $project->prioridad = $data['prioridad'] ?? 'media';
+        }
+
+        if (($data['estado'] ?? null) === 'finalizado') {
+            if (Schema::hasColumn('projects', 'completed_by') && empty($project->completed_by)) {
+                $project->completed_by = $request->user()->id;
+            }
+
+            if (Schema::hasColumn('projects', 'completed_at') && empty($project->completed_at)) {
+                $project->completed_at = now();
+            }
+        }
+
+        if (($data['estado'] ?? null) !== 'finalizado') {
+            if (Schema::hasColumn('projects', 'completed_by')) {
+                $project->completed_by = null;
+            }
+
+            if (Schema::hasColumn('projects', 'completed_at')) {
+                $project->completed_at = null;
+            }
+        }
+
         $project->save();
 
         return redirect()
             ->route('projects.show', $project)
             ->with('success', 'Proyecto actualizado correctamente.');
+    }
+
+    public function complete(Request $request, Project $project): RedirectResponse
+    {
+        Gate::authorize('complete', $project);
+
+        $project->estado = 'finalizado';
+
+        if (Schema::hasColumn('projects', 'completed_by')) {
+            $project->completed_by = $request->user()->id;
+        }
+
+        if (Schema::hasColumn('projects', 'completed_at')) {
+            $project->completed_at = now();
+        }
+
+        $project->save();
+
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('success', 'Proyecto finalizado correctamente.');
     }
 
     public function destroy(Project $project): RedirectResponse

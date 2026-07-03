@@ -4,25 +4,66 @@
 
 @section('content')
     @php
-        $estado = $task->estado ?? 'sin_estado';
+        $estados = [
+            'pendiente' => 'Pendiente',
+            'en_progreso' => 'En progreso',
+            'completada' => 'Completada',
+        ];
 
-        $badgeClass = match($estado) {
+        $prioridades = [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+
+        $estado = $task->estado ?? 'pendiente';
+
+        $estadoBadgeClass = match ($estado) {
             'pendiente' => 'badge-yellow',
-            'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
-            'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
-            'cancelada', 'cancelado' => 'badge-red',
+            'en_progreso' => 'badge-blue',
+            'completada' => 'badge-green',
             default => 'badge-blue',
         };
 
-        $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+        $estadoTexto = $estados[$estado] ?? ucfirst(str_replace('_', ' ', $estado));
+
+        $prioridad = $task->prioridad ?? 'media';
+
+        $prioridadBadgeClass = match ($prioridad) {
+            'baja' => 'badge-green',
+            'media' => 'badge-blue',
+            'alta' => 'badge-yellow',
+            'urgente' => 'badge-red',
+            default => 'badge-blue',
+        };
+
+        $prioridadTexto = $prioridades[$prioridad] ?? ucfirst($prioridad);
+
+        $esPrioridadDestacada = in_array($prioridad, ['alta', 'urgente'], true);
+        $estaCompletada = $estado === 'completada';
     @endphp
 
-    <div class="page-card">
+    <div class="page-card" @if ($esPrioridadDestacada) style="border-left: 6px solid #f97316; background: #fff7ed;" @endif>
         <h1 class="page-title">Detalle de tarea</h1>
 
         <p class="page-subtitle">
             Información completa de la tarea seleccionada.
         </p>
+
+        @if ($estaCompletada)
+            <p style="color: #15803d; font-weight: bold;">
+                Esta tarea ya fue completada.
+            </p>
+        @elseif ($prioridad === 'urgente')
+            <p style="color: #dc2626; font-weight: bold;">
+                Esta tarea requiere atención urgente.
+            </p>
+        @elseif ($prioridad === 'alta')
+            <p style="color: #d97706; font-weight: bold;">
+                Esta tarea tiene prioridad alta.
+            </p>
+        @endif
 
         <p>
             <strong>Proyecto:</strong>
@@ -40,21 +81,90 @@
         </p>
 
         <p style="margin-top: 12px;">
+            <strong>Asignado a:</strong>
+
+            @if ($task->assignee)
+                {{ $task->assignee->name }}
+
+                <span style="color: #6b7280;">
+                    — {{ $task->assignee->email }}
+                </span>
+            @else
+                <span class="badge badge-gray">
+                    Sin asignar
+                </span>
+            @endif
+        </p>
+
+        <p style="margin-top: 12px;">
             <strong>Estado:</strong>
-            <span class="badge {{ $badgeClass }}">
+            <span class="badge {{ $estadoBadgeClass }}">
                 {{ $estadoTexto }}
             </span>
         </p>
 
         <p style="margin-top: 12px;">
+            <strong>Prioridad:</strong>
+            <span class="badge {{ $prioridadBadgeClass }}">
+                {{ $prioridadTexto }}
+            </span>
+        </p>
+
+        <p style="margin-top: 12px;">
             <strong>Fecha límite:</strong>
-            {{ $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('d/m/Y') : 'Sin fecha' }}
+            {{ $task->due_date ? $task->due_date->format('d/m/Y') : 'Sin fecha' }}
+        </p>
+
+        @if ($estaCompletada)
+            <div style="margin-top: 14px; padding: 14px; border-radius: 10px; background: #dcfce7; border-left: 5px solid #16a34a;">
+                <p>
+                    <strong>Tarea completada por:</strong>
+
+                    @if ($task->completedBy)
+                        {{ $task->completedBy->name }}
+                        <span style="color: #6b7280;">
+                            — {{ $task->completedBy->email }}
+                        </span>
+                    @else
+                        Usuario no registrado
+                    @endif
+                </p>
+
+                <p style="margin-top: 8px;">
+                    <strong>Fecha de completado:</strong>
+                    {{ $task->completed_at ? $task->completed_at->format('d/m/Y H:i') : 'Sin fecha registrada' }}
+                </p>
+            </div>
+        @endif
+
+        <p style="margin-top: 12px;">
+            <strong>Creada:</strong>
+            {{ $task->created_at?->format('d/m/Y H:i') }}
+        </p>
+
+        <p style="margin-top: 12px;">
+            <strong>Última actualización:</strong>
+            {{ $task->updated_at?->format('d/m/Y H:i') }}
         </p>
 
         <div class="actions" style="margin-top: 18px;">
             <a href="{{ route('projects.tasks.index', $project) }}" class="btn btn-secondary">
                 Volver a tareas
             </a>
+
+            @can('complete', $task)
+                <form action="{{ route('projects.tasks.complete', [$project, $task]) }}"
+                      method="POST"
+                      data-confirm-delete="true"
+                      data-confirm-message="¿Seguro que deseas marcar esta tarea como completada?">
+                    @csrf
+                    @method('PATCH')
+
+                    <button type="submit" class="btn btn-success">
+                        Completar tarea
+                    </button>
+                </form>
+            @endcan
 
             @can('update', $task)
                 <a href="{{ route('projects.tasks.edit', [$project, $task]) }}" class="btn btn-warning">

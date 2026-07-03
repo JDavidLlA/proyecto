@@ -61,6 +61,10 @@
         border-left-color: #4f46e5;
     }
 
+    .stat-card.red {
+        border-left-color: #dc2626;
+    }
+
     .stat-card p {
         font-size: 14px;
         color: #6b7280;
@@ -136,6 +140,11 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
+    .section-card.priority-alert {
+        border-left: 6px solid #f97316;
+        background: #fff7ed;
+    }
+
     .section-header {
         display: flex;
         align-items: center;
@@ -162,6 +171,24 @@
 
     .list-item:last-child {
         border-bottom: none;
+    }
+
+    .list-item.priority-high {
+        padding: 15px;
+        margin-bottom: 10px;
+        border-bottom: none;
+        border-left: 5px solid #f59e0b;
+        background: #fffbeb;
+        border-radius: 10px;
+    }
+
+    .list-item.priority-urgent {
+        padding: 15px;
+        margin-bottom: 10px;
+        border-bottom: none;
+        border-left: 5px solid #dc2626;
+        background: #fef2f2;
+        border-radius: 10px;
     }
 
     .item-row {
@@ -223,6 +250,11 @@
         color: #15803d;
     }
 
+    .badge-red {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
     .badge-gray {
         background: #f3f4f6;
         color: #4b5563;
@@ -235,7 +267,7 @@
 
     .task-meta {
         text-align: right;
-        min-width: 110px;
+        min-width: 120px;
     }
 
     .task-comments {
@@ -279,36 +311,46 @@
         @can('projects.view')
             <div class="stat-card">
                 <p>Total de proyectos</p>
-                <h2>{{ $totalProjects }}</h2>
+                <h2>{{ $totalProjects ?? 0 }}</h2>
             </div>
         @endcan
 
         @can('tasks.view')
             <div class="stat-card purple">
                 <p>Total de tareas</p>
-                <h2>{{ $totalTasks }}</h2>
+                <h2>{{ $totalTasks ?? 0 }}</h2>
             </div>
 
             <div class="stat-card yellow">
                 <p>Tareas pendientes</p>
-                <h2>{{ $pendingTasks }}</h2>
+                <h2>{{ $pendingTasks ?? 0 }}</h2>
             </div>
 
             <div class="stat-card orange">
-                <p>Tareas en proceso</p>
-                <h2>{{ $inProcessTasks }}</h2>
+                <p>Tareas en progreso</p>
+                <h2>{{ $inProcessTasks ?? 0 }}</h2>
             </div>
 
             <div class="stat-card green">
                 <p>Tareas completadas</p>
-                <h2>{{ $completedTasks }}</h2>
+                <h2>{{ $completedTasks ?? 0 }}</h2>
+            </div>
+
+            <div class="stat-card yellow">
+                <p>Tareas prioridad alta</p>
+                <h2>{{ $highPriorityTasksCount ?? 0 }}</h2>
+            </div>
+
+            <div class="stat-card red">
+                <p>Tareas urgentes</p>
+                <h2>{{ $urgentPriorityTasksCount ?? 0 }}</h2>
             </div>
         @endcan
 
         @can('comments.view')
             <div class="stat-card indigo">
                 <p>Total de comentarios</p>
-                <h2>{{ $totalComments }}</h2>
+                <h2>{{ $totalComments ?? 0 }}</h2>
             </div>
         @endcan
 
@@ -352,7 +394,21 @@
                     </a>
                 </div>
 
-                @forelse($latestProjects as $project)
+                @forelse($latestProjects ?? [] as $project)
+                    @php
+                        $projectPrioridad = $project->prioridad ?? 'media';
+
+                        $projectPrioridadClass = match ($projectPrioridad) {
+                            'baja' => 'badge-green',
+                            'media' => 'badge-blue',
+                            'alta' => 'badge-yellow',
+                            'urgente' => 'badge-red',
+                            default => 'badge-gray',
+                        };
+
+                        $projectPrioridadTexto = ucfirst($projectPrioridad);
+                    @endphp
+
                     <div class="list-item">
                         <div class="item-row">
                             <div>
@@ -369,10 +425,16 @@
                                 </p>
                             </div>
 
-                            <div>
+                            <div class="task-meta">
                                 <span class="badge badge-blue">
                                     {{ $project->tasks_count ?? 0 }} tareas
                                 </span>
+
+                                <p style="margin-top: 8px;">
+                                    <span class="badge {{ $projectPrioridadClass }}">
+                                        {{ $projectPrioridadTexto }}
+                                    </span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -385,21 +447,113 @@
         @endcan
 
         @can('tasks.view')
-            <div class="section-card">
-                <h2>Últimas tareas</h2>
+            <div class="section-card priority-alert">
+                <div class="section-header">
+                    <h2>Tareas altas o urgentes</h2>
 
-                @forelse($latestTasks as $task)
+                    @if(isset($firstProjectWithPriorityTasks) && $firstProjectWithPriorityTasks)
+                        <a href="{{ route('projects.tasks.index', $firstProjectWithPriorityTasks) }}?prioridad=alta">
+                            Ver filtro
+                        </a>
+                    @endif
+                </div>
+
+                @forelse($priorityTasks ?? [] as $task)
                     @php
-                        $estado = $task->estado ?? 'sin_estado';
+                        $prioridad = $task->prioridad ?? 'media';
 
-                        $badgeClass = match($estado) {
+                        $priorityItemClass = match ($prioridad) {
+                            'urgente' => 'priority-urgent',
+                            'alta' => 'priority-high',
+                            default => '',
+                        };
+
+                        $priorityBadgeClass = match ($prioridad) {
+                            'urgente' => 'badge-red',
+                            'alta' => 'badge-yellow',
+                            default => 'badge-blue',
+                        };
+
+                        $prioridadTexto = ucfirst($prioridad);
+
+                        $estado = $task->estado ?? 'pendiente';
+
+                        $estadoBadgeClass = match ($estado) {
                             'pendiente' => 'badge-yellow',
-                            'en_proceso', 'en proceso', 'proceso' => 'badge-orange',
-                            'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
+                            'en_progreso' => 'badge-orange',
+                            'completada' => 'badge-green',
                             default => 'badge-gray',
                         };
 
                         $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+                    @endphp
+
+                    <div class="list-item {{ $priorityItemClass }}">
+                        <div class="item-row">
+                            <div>
+                                <a href="{{ route('projects.tasks.show', [$task->project_id, $task->id]) }}" class="item-title">
+                                    {{ $task->titulo ?? $task->title ?? $task->nombre ?? 'Tarea sin título' }}
+                                </a>
+
+                                <p class="item-description">
+                                    Proyecto:
+                                    {{ $task->project->nombre ?? $task->project->name ?? $task->project->titulo ?? 'Sin proyecto' }}
+                                </p>
+
+                                <p class="item-date">
+                                    Creada: {{ $task->created_at?->format('d/m/Y H:i') }}
+                                </p>
+                            </div>
+
+                            <div class="task-meta">
+                                <span class="badge {{ $priorityBadgeClass }}">
+                                    {{ $prioridadTexto }}
+                                </span>
+
+                                <p style="margin-top: 8px;">
+                                    <span class="badge {{ $estadoBadgeClass }}">
+                                        {{ $estadoTexto }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <p class="empty-text">
+                        No hay tareas con prioridad alta o urgente.
+                    </p>
+                @endforelse
+            </div>
+        @endcan
+
+        @can('tasks.view')
+            <div class="section-card">
+                <h2>Últimas tareas</h2>
+
+                @forelse($latestTasks ?? [] as $task)
+                    @php
+                        $estado = $task->estado ?? 'pendiente';
+
+                        $estadoBadgeClass = match ($estado) {
+                            'pendiente' => 'badge-yellow',
+                            'en_progreso' => 'badge-orange',
+                            'completada' => 'badge-green',
+                            default => 'badge-gray',
+                        };
+
+                        $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+
+                        $prioridad = $task->prioridad ?? 'media';
+
+                        $prioridadBadgeClass = match ($prioridad) {
+                            'baja' => 'badge-green',
+                            'media' => 'badge-blue',
+                            'alta' => 'badge-yellow',
+                            'urgente' => 'badge-red',
+                            default => 'badge-gray',
+                        };
+
+                        $prioridadTexto = ucfirst($prioridad);
                     @endphp
 
                     <div class="list-item">
@@ -426,9 +580,15 @@
                             </div>
 
                             <div class="task-meta">
-                                <span class="badge {{ $badgeClass }}">
+                                <span class="badge {{ $estadoBadgeClass }}">
                                     {{ $estadoTexto }}
                                 </span>
+
+                                <p style="margin-top: 8px;">
+                                    <span class="badge {{ $prioridadBadgeClass }}">
+                                        {{ $prioridadTexto }}
+                                    </span>
+                                </p>
 
                                 <p class="task-comments">
                                     {{ $task->comments_count ?? 0 }} comentarios

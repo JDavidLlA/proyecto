@@ -24,7 +24,7 @@ class DomainSeeder extends Seeder
         $lider = User::firstOrCreate(
             ['email' => 'lider@gestor.com'],
             [
-                'name' => 'Lider de Proyecto',
+                'name' => 'Líder de Proyecto',
                 'password' => Hash::make('password'),
             ]
         );
@@ -45,11 +45,12 @@ class DomainSeeder extends Seeder
             ]
         );
 
-        $project = Project::firstOrCreate(
+        $project = Project::updateOrCreate(
             ['nombre' => 'Sistema Web Gestor'],
             [
-                'descripcion' => 'Proyecto colaborativo inicial para probar relaciones, tareas, miembros y comentarios.',
-                'estado' => 'en_proceso',
+                'descripcion' => 'Proyecto colaborativo inicial para probar relaciones, tareas, miembros, prioridades y comentarios.',
+                'estado' => 'activo',
+                'prioridad' => 'alta',
                 'owner_id' => $lider->id,
             ]
         );
@@ -60,7 +61,7 @@ class DomainSeeder extends Seeder
             $invitado->id => ['project_role' => 'invitado'],
         ]);
 
-        $task1 = Task::firstOrCreate(
+        $task1 = Task::updateOrCreate(
             [
                 'project_id' => $project->id,
                 'titulo' => 'Diseñar la base de datos',
@@ -74,7 +75,7 @@ class DomainSeeder extends Seeder
             ]
         );
 
-        $task2 = Task::firstOrCreate(
+        $task2 = Task::updateOrCreate(
             [
                 'project_id' => $project->id,
                 'titulo' => 'Crear las vistas Blade',
@@ -85,6 +86,20 @@ class DomainSeeder extends Seeder
                 'prioridad' => 'media',
                 'assignee_id' => $colaborador->id,
                 'due_date' => now()->addDays(7)->toDateString(),
+            ]
+        );
+
+        $task3 = Task::updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'titulo' => 'Corregir módulo de prioridad',
+            ],
+            [
+                'descripcion' => 'Verificar que proyectos y tareas muestren prioridad baja, media, alta y urgente.',
+                'estado' => 'pendiente',
+                'prioridad' => 'urgente',
+                'assignee_id' => $lider->id,
+                'due_date' => now()->addDay()->toDateString(),
             ]
         );
 
@@ -109,6 +124,14 @@ class DomainSeeder extends Seeder
                 'task_id' => $task2->id,
                 'user_id' => $invitado->id,
                 'cuerpo' => 'Quedo atento al avance del proyecto.',
+            ]
+        );
+
+        Comment::firstOrCreate(
+            [
+                'task_id' => $task3->id,
+                'user_id' => $lider->id,
+                'cuerpo' => 'Esta tarea servirá para probar la prioridad urgente en el dashboard.',
             ]
         );
     }

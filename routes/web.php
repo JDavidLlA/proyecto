@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,25 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 Route::middleware('auth')->group(function () {
     Route::resource('projects', ProjectController::class);
+
+    Route::patch('/projects/{project}/complete', [ProjectController::class, 'complete'])
+        ->name('projects.complete');
+
+    Route::get('/projects/{project}/members', [ProjectMemberController::class, 'index'])
+        ->name('projects.members.index');
+
+    Route::post('/projects/{project}/members', [ProjectMemberController::class, 'store'])
+        ->name('projects.members.store');
+
+    Route::put('/projects/{project}/members/{user}', [ProjectMemberController::class, 'update'])
+        ->name('projects.members.update');
+
+    Route::delete('/projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy'])
+        ->name('projects.members.destroy');
+
+    Route::patch('/projects/{project}/tasks/{task}/complete', [TaskController::class, 'complete'])
+        ->name('projects.tasks.complete');
+
     Route::resource('projects.tasks', TaskController::class);
 
     Route::resource('projects.tasks.comments', CommentController::class)

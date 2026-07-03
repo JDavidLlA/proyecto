@@ -3,6 +3,21 @@
 @section('title', 'Proyectos')
 
 @section('content')
+    @php
+        $estados = $estados ?? [
+            'activo' => 'Activo',
+            'pausado' => 'Pausado',
+            'finalizado' => 'Finalizado',
+        ];
+
+        $prioridades = $prioridades ?? [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+    @endphp
+
     <div class="page-card">
         <h1 class="page-title">Proyectos</h1>
 
@@ -29,7 +44,7 @@
         </h2>
 
         <form action="{{ route('projects.index') }}" method="GET">
-            <div style="display: grid; grid-template-columns: 1fr 220px auto auto; gap: 12px; align-items: end;">
+            <div style="display: grid; grid-template-columns: 1fr 200px 200px auto auto; gap: 12px; align-items: end;">
                 <div>
                     <label for="buscar">
                         Buscar
@@ -39,7 +54,7 @@
                         type="text"
                         id="buscar"
                         name="buscar"
-                        value="{{ request('buscar') }}"
+                        value="{{ $buscar ?? request('buscar') }}"
                         placeholder="Buscar por nombre o descripción"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
                     >
@@ -56,18 +71,32 @@
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
                     >
                         <option value="">Todos</option>
-                        <option value="pendiente" @selected(request('estado') === 'pendiente')>
-                            Pendiente
-                        </option>
-                        <option value="en_proceso" @selected(request('estado') === 'en_proceso')>
-                            En proceso
-                        </option>
-                        <option value="completado" @selected(request('estado') === 'completado')>
-                            Completado
-                        </option>
-                        <option value="cancelado" @selected(request('estado') === 'cancelado')>
-                            Cancelado
-                        </option>
+
+                        @foreach ($estados as $valor => $texto)
+                            <option value="{{ $valor }}" @selected(($estado ?? request('estado')) === $valor)>
+                                {{ $texto }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="prioridad">
+                        Prioridad
+                    </label>
+
+                    <select
+                        id="prioridad"
+                        name="prioridad"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
+                    >
+                        <option value="">Todas</option>
+
+                        @foreach ($prioridades as $valor => $texto)
+                            <option value="{{ $valor }}" @selected(($prioridad ?? request('prioridad')) === $valor)>
+                                {{ $texto }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -105,6 +134,7 @@
                         <th>ID</th>
                         <th>Nombre</th>
                         <th>Estado</th>
+                        <th>Prioridad</th>
                         <th>Fecha de creación</th>
                         <th>Acciones</th>
                     </tr>
@@ -112,30 +142,84 @@
 
                 <tbody>
                     @forelse ($projects as $project)
-                        <tr>
+                        @php
+                            $estadoActual = $project->estado ?? 'activo';
+
+                            $estadoBadgeClass = match ($estadoActual) {
+                                'activo' => 'badge-green',
+                                'pausado' => 'badge-yellow',
+                                'finalizado' => 'badge-blue',
+                                default => 'badge-blue',
+                            };
+
+                            $estadoTexto = $estados[$estadoActual] ?? ucfirst(str_replace('_', ' ', $estadoActual));
+
+                            $prioridadActual = $project->prioridad ?? 'media';
+
+                            $prioridadBadgeClass = match ($prioridadActual) {
+                                'baja' => 'badge-green',
+                                'media' => 'badge-blue',
+                                'alta' => 'badge-yellow',
+                                'urgente' => 'badge-red',
+                                default => 'badge-blue',
+                            };
+
+                            $prioridadTexto = $prioridades[$prioridadActual] ?? ucfirst($prioridadActual);
+
+                            $esPrioridadDestacada = in_array($prioridadActual, ['alta', 'urgente'], true);
+
+                            $proyectoFinalizado = $estadoActual === 'finalizado';
+                        @endphp
+
+                        <tr @if ($esPrioridadDestacada) style="background: #fff7ed; border-left: 5px solid #f97316;" @endif>
                             <td>{{ $project->id }}</td>
 
                             <td>
                                 <strong>{{ $project->nombre }}</strong>
+
+                                @if ($prioridadActual === 'urgente')
+                                    <div style="margin-top: 4px; color: #dc2626; font-size: 13px; font-weight: bold;">
+                                        Atención urgente
+                                    </div>
+                                @elseif ($prioridadActual === 'alta')
+                                    <div style="margin-top: 4px; color: #d97706; font-size: 13px; font-weight: bold;">
+                                        Prioridad alta
+                                    </div>
+                                @endif
+
+                                @if ($proyectoFinalizado)
+                                    <div style="margin-top: 8px; color: #15803d; font-size: 13px; font-weight: bold;">
+                                        Proyecto finalizado
+                                    </div>
+                                @endif
                             </td>
 
                             <td>
-                                @php
-                                    $estado = $project->estado ?? 'sin_estado';
-
-                                    $badgeClass = match($estado) {
-                                        'pendiente' => 'badge-yellow',
-                                        'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
-                                        'completado', 'completada', 'finalizado', 'finalizada' => 'badge-green',
-                                        'cancelado', 'cancelada' => 'badge-red',
-                                        default => 'badge-blue',
-                                    };
-
-                                    $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
-                                @endphp
-
-                                <span class="badge {{ $badgeClass }}">
+                                <span class="badge {{ $estadoBadgeClass }}">
                                     {{ $estadoTexto }}
+                                </span>
+
+                                @if ($proyectoFinalizado)
+                                    <div style="margin-top: 8px; font-size: 13px; color: #15803d;">
+                                        <strong>Finalizado por:</strong>
+
+                                        @if ($project->completedBy)
+                                            {{ $project->completedBy->name }}
+                                        @else
+                                            Usuario no registrado
+                                        @endif
+                                    </div>
+
+                                    <div style="margin-top: 4px; font-size: 12px; color: #6b7280;">
+                                        <strong>Fecha:</strong>
+                                        {{ $project->completed_at ? $project->completed_at->format('d/m/Y H:i') : 'Sin fecha registrada' }}
+                                    </div>
+                                @endif
+                            </td>
+
+                            <td>
+                                <span class="badge {{ $prioridadBadgeClass }}">
+                                    {{ $prioridadTexto }}
                                 </span>
                             </td>
 
@@ -158,6 +242,10 @@
                                     @endcan
 
                                     @can('update', $project)
+                                        <a href="{{ route('projects.members.index', $project) }}" class="btn btn-success">
+                                            Miembros
+                                        </a>
+
                                         <a href="{{ route('projects.edit', $project) }}" class="btn btn-warning">
                                             Editar
                                         </a>
@@ -181,7 +269,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 No hay proyectos registrados.
                             </td>
                         </tr>

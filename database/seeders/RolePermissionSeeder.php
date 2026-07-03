@@ -83,13 +83,12 @@ class RolePermissionSeeder extends Seeder
             'projects.view',
 
             'tasks.view',
-            'tasks.update',
 
             'comments.view',
             'comments.create',
             'comments.update',
             'comments.delete',
-]);
+        ]);
 
         $invitado->syncPermissions([
             'projects.view',

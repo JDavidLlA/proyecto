@@ -3,6 +3,21 @@
 @section('title', 'Tareas del proyecto')
 
 @section('content')
+    @php
+        $estados = $estados ?? [
+            'pendiente' => 'Pendiente',
+            'en_progreso' => 'En progreso',
+            'completada' => 'Completada',
+        ];
+
+        $prioridades = $prioridades ?? [
+            'baja' => 'Baja',
+            'media' => 'Media',
+            'alta' => 'Alta',
+            'urgente' => 'Urgente',
+        ];
+    @endphp
+
     <div class="page-card">
         <h1 class="page-title">Tareas del proyecto</h1>
 
@@ -32,7 +47,7 @@
         </h2>
 
         <form action="{{ route('projects.tasks.index', $project) }}" method="GET">
-            <div style="display: grid; grid-template-columns: 1fr 220px auto auto; gap: 12px; align-items: end;">
+            <div style="display: grid; grid-template-columns: 1fr 200px 200px auto auto; gap: 12px; align-items: end;">
                 <div>
                     <label for="buscar">
                         Buscar
@@ -42,7 +57,7 @@
                         type="text"
                         id="buscar"
                         name="buscar"
-                        value="{{ request('buscar') }}"
+                        value="{{ $buscar ?? request('buscar') }}"
                         placeholder="Buscar por título o descripción"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
                     >
@@ -59,18 +74,32 @@
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
                     >
                         <option value="">Todos</option>
-                        <option value="pendiente" @selected(request('estado') === 'pendiente')>
-                            Pendiente
-                        </option>
-                        <option value="en_proceso" @selected(request('estado') === 'en_proceso')>
-                            En proceso
-                        </option>
-                        <option value="completada" @selected(request('estado') === 'completada')>
-                            Completada
-                        </option>
-                        <option value="cancelada" @selected(request('estado') === 'cancelada')>
-                            Cancelada
-                        </option>
+
+                        @foreach ($estados as $valor => $texto)
+                            <option value="{{ $valor }}" @selected(($estado ?? request('estado')) === $valor)>
+                                {{ $texto }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="prioridad">
+                        Prioridad
+                    </label>
+
+                    <select
+                        id="prioridad"
+                        name="prioridad"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
+                    >
+                        <option value="">Todas</option>
+
+                        @foreach ($prioridades as $valor => $texto)
+                            <option value="{{ $valor }}" @selected(($prioridad ?? request('prioridad')) === $valor)>
+                                {{ $texto }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -107,7 +136,9 @@
                     <tr>
                         <th>ID</th>
                         <th>Título</th>
+                        <th>Asignado a</th>
                         <th>Estado</th>
+                        <th>Prioridad</th>
                         <th>Fecha límite</th>
                         <th>Acciones</th>
                     </tr>
@@ -116,34 +147,76 @@
                 <tbody>
                     @forelse ($tasks as $task)
                         @php
-                            $estado = $task->estado ?? 'sin_estado';
+                            $estadoActual = $task->estado ?? 'pendiente';
 
-                            $badgeClass = match($estado) {
+                            $estadoBadgeClass = match ($estadoActual) {
                                 'pendiente' => 'badge-yellow',
-                                'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
-                                'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
-                                'cancelada', 'cancelado' => 'badge-red',
+                                'en_progreso' => 'badge-blue',
+                                'completada' => 'badge-green',
                                 default => 'badge-blue',
                             };
 
-                            $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+                            $estadoTexto = $estados[$estadoActual] ?? ucfirst(str_replace('_', ' ', $estadoActual));
+
+                            $prioridadActual = $task->prioridad ?? 'media';
+
+                            $prioridadBadgeClass = match ($prioridadActual) {
+                                'baja' => 'badge-green',
+                                'media' => 'badge-blue',
+                                'alta' => 'badge-yellow',
+                                'urgente' => 'badge-red',
+                                default => 'badge-blue',
+                            };
+
+                            $prioridadTexto = $prioridades[$prioridadActual] ?? ucfirst($prioridadActual);
+
+                            $esPrioridadDestacada = in_array($prioridadActual, ['alta', 'urgente'], true);
                         @endphp
 
-                        <tr>
+                        <tr @if ($esPrioridadDestacada) style="background: #fff7ed; border-left: 5px solid #f97316;" @endif>
                             <td>{{ $task->id }}</td>
 
                             <td>
                                 <strong>{{ $task->titulo ?? 'Sin título' }}</strong>
+
+                                @if ($prioridadActual === 'urgente')
+                                    <div style="margin-top: 4px; color: #dc2626; font-size: 13px; font-weight: bold;">
+                                        Atención urgente
+                                    </div>
+                                @elseif ($prioridadActual === 'alta')
+                                    <div style="margin-top: 4px; color: #d97706; font-size: 13px; font-weight: bold;">
+                                        Prioridad alta
+                                    </div>
+                                @endif
                             </td>
 
                             <td>
-                                <span class="badge {{ $badgeClass }}">
+                                @if ($task->assignee)
+                                    <strong>{{ $task->assignee->name }}</strong>
+                                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                                        {{ $task->assignee->email }}
+                                    </div>
+                                @else
+                                    <span class="badge badge-gray">
+                                        Sin asignar
+                                    </span>
+                                @endif
+                            </td>
+
+                            <td>
+                                <span class="badge {{ $estadoBadgeClass }}">
                                     {{ $estadoTexto }}
                                 </span>
                             </td>
 
                             <td>
-                                {{ $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('d/m/Y') : 'Sin fecha' }}
+                                <span class="badge {{ $prioridadBadgeClass }}">
+                                    {{ $prioridadTexto }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ $task->due_date ? $task->due_date->format('d/m/Y') : 'Sin fecha' }}
                             </td>
 
                             <td>
@@ -178,7 +251,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="7">
                                 No hay tareas registradas para este proyecto.
                             </td>
                         </tr>
