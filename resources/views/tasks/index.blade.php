@@ -27,6 +27,80 @@
     </div>
 
     <div class="page-card">
+        <h2 class="page-title" style="font-size: 22px;">
+            Buscar y filtrar tareas
+        </h2>
+
+        <form action="{{ route('projects.tasks.index', $project) }}" method="GET">
+            <div style="display: grid; grid-template-columns: 1fr 220px auto auto; gap: 12px; align-items: end;">
+                <div>
+                    <label for="buscar">
+                        Buscar
+                    </label>
+
+                    <input
+                        type="text"
+                        id="buscar"
+                        name="buscar"
+                        value="{{ request('buscar') }}"
+                        placeholder="Buscar por título o descripción"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
+                    >
+                </div>
+
+                <div>
+                    <label for="estado">
+                        Estado
+                    </label>
+
+                    <select
+                        id="estado"
+                        name="estado"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;"
+                    >
+                        <option value="">Todos</option>
+                        <option value="pendiente" @selected(request('estado') === 'pendiente')>
+                            Pendiente
+                        </option>
+                        <option value="en_proceso" @selected(request('estado') === 'en_proceso')>
+                            En proceso
+                        </option>
+                        <option value="completada" @selected(request('estado') === 'completada')>
+                            Completada
+                        </option>
+                        <option value="cancelada" @selected(request('estado') === 'cancelada')>
+                            Cancelada
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        Filtrar
+                    </button>
+                </div>
+
+                <div>
+                    <a href="{{ route('projects.tasks.index', $project) }}" class="btn btn-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="page-card">
+        @if ($tasks->total() > 0)
+            <p class="page-subtitle">
+                Mostrando {{ $tasks->firstItem() }} a {{ $tasks->lastItem() }}
+                de {{ $tasks->total() }} tareas.
+            </p>
+        @else
+            <p class="page-subtitle">
+                No se encontraron tareas con los filtros seleccionados.
+            </p>
+        @endif
+
         <div class="table-container">
             <table>
                 <thead>

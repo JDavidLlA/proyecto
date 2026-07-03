@@ -7,20 +7,42 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    public function index(Project $project): View
+    public function index(Request $request, Project $project): View
     {
         Gate::authorize('viewAny', [Task::class, $project]);
 
-        $tasks = $project->tasks()
-            ->orderByDesc('id')
-            ->paginate(10);
+        $buscar = trim((string) $request->input('buscar', ''));
+        $estado = $request->input('estado');
 
-        return view('tasks.index', compact('project', 'tasks'));
+        $query = $project->tasks()
+            ->orderByDesc('id');
+
+        if ($buscar !== '') {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('titulo', 'ILIKE', '%' . $buscar . '%');
+
+                if (Schema::hasColumn('tasks', 'descripcion')) {
+                    $q->orWhere('descripcion', 'ILIKE', '%' . $buscar . '%');
+                }
+            });
+        }
+
+        if (! empty($estado)) {
+            $query->where('estado', $estado);
+        }
+
+        $tasks = $query
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('tasks.index', compact('project', 'tasks', 'buscar', 'estado'));
     }
 
     public function create(Project $project): View
