@@ -129,10 +129,14 @@
             <strong>Gestor</strong>
 
             @auth
-                <a href="{{ route('dashboard') }}">Dashboard</a>
+            <a href="{{ route('dashboard') }}">Dashboard</a>
+
+                @can('projects.view')
+            <a href="{{ route('projects.index') }}">Proyectos</a>
+                @endcan
 
                 @role('admin')
-                    <a href="{{ route('admin.users.index') }}">Usuarios</a>
+            <a href="{{ route('admin.users.index') }}">Usuarios</a>
                 @endrole
             @endauth
         </div>

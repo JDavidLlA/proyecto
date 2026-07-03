@@ -1,7 +1,7 @@
 <?php
-
 use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,6 +25,10 @@ Route::get('/dashboard', function () {
 })
     ->middleware('auth')
     ->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::resource('projects', ProjectController::class);
+});
 
 Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
