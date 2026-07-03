@@ -49,7 +49,7 @@ class DomainSeeder extends Seeder
             ['nombre' => 'Sistema Web Gestor'],
             [
                 'descripcion' => 'Proyecto colaborativo inicial para probar relaciones, tareas, miembros y comentarios.',
-                'estado' => 'activo',
+                'estado' => 'en_proceso',
                 'owner_id' => $lider->id,
             ]
         );
