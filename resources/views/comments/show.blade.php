@@ -1,37 +1,64 @@
 @extends('layouts.app')
 
-@section('content')
-<div style="max-width: 800px; margin: 30px auto;">
-    <h1>Detalle del comentario</h1>
+@section('title', 'Detalle del comentario')
 
-    <div style="background: white; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
-        <p><strong>Proyecto:</strong> {{ $project->nombre }}</p>
-        <p><strong>Tarea:</strong> {{ $task->titulo }}</p>
-        <p><strong>Usuario:</strong> {{ $comment->user->name ?? 'Usuario eliminado' }}</p>
+@section('content')
+    <div class="page-card">
+        <h1 class="page-title">Detalle del comentario</h1>
+
+        <p class="page-subtitle">
+            Información del comentario registrado en la tarea.
+        </p>
 
         <p>
+            <strong>Proyecto:</strong>
+            {{ $project->nombre ?? 'Proyecto sin nombre' }}
+        </p>
+
+        <p style="margin-top: 12px;">
+            <strong>Tarea:</strong>
+            {{ $task->titulo ?? 'Tarea sin título' }}
+        </p>
+
+        <p style="margin-top: 12px;">
+            <strong>Usuario:</strong>
+            {{ $comment->user->name ?? 'Usuario eliminado' }}
+        </p>
+
+        <p style="margin-top: 12px;">
             <strong>Comentario:</strong><br>
             {{ $comment->cuerpo }}
         </p>
 
-        <p>
+        <p style="margin-top: 12px;">
             <strong>Fecha:</strong>
             {{ $comment->created_at?->format('d/m/Y H:i') }}
         </p>
-    </div>
 
-    <div style="margin-top: 20px; display: flex; gap: 10px;">
-        <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-           style="padding: 10px 15px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px;">
-            Volver
-        </a>
-
-        @can('update', $comment)
-            <a href="{{ route('projects.tasks.comments.edit', [$project, $task, $comment]) }}"
-               style="padding: 10px 15px; background: #ca8a04; color: white; text-decoration: none; border-radius: 8px;">
-                Editar
+        <div class="actions" style="margin-top: 18px;">
+            <a href="{{ route('projects.tasks.show', [$project, $task]) }}" class="btn btn-secondary">
+                Volver a la tarea
             </a>
-        @endcan
+
+            @can('update', $comment)
+                <a href="{{ route('projects.tasks.comments.edit', [$project, $task, $comment]) }}" class="btn btn-warning">
+                    Editar comentario
+                </a>
+            @endcan
+
+            @can('delete', $comment)
+                <form action="{{ route('projects.tasks.comments.destroy', [$project, $task, $comment]) }}"
+                      method="POST"
+                      data-confirm-delete="true"
+                      data-confirm-message="¿Seguro que deseas eliminar este comentario?">
+                    @csrf
+                    @method('DELETE')
+
+                    <button type="submit" class="btn btn-danger">
+                        Eliminar comentario
+                    </button>
+                </form>
+            @endcan
+        </div>
     </div>
-</div>
 @endsection

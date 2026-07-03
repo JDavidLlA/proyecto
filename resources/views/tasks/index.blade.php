@@ -1,99 +1,120 @@
 @extends('layouts.app')
 
+@section('title', 'Tareas del proyecto')
+
 @section('content')
-<div style="max-width: 1100px; margin: 30px auto;">
-    <h1>Tareas del proyecto</h1>
+    <div class="page-card">
+        <h1 class="page-title">Tareas del proyecto</h1>
 
-    <p>
-        <strong>Proyecto:</strong>
-        {{ $project->nombre ?? $project->titulo ?? $project->name ?? ('Proyecto #' . $project->id) }}
-    </p>
+        <p class="page-subtitle">
+            Proyecto:
+            <strong>
+                {{ $project->nombre ?? $project->titulo ?? $project->name ?? ('Proyecto #' . $project->id) }}
+            </strong>
+        </p>
 
-    @if (session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-        <a href="{{ route('projects.show', $project) }}"
-           style="padding: 10px 15px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px;">
-            Volver al proyecto
-        </a>
-
-        @can('create', [\App\Models\Task::class, $project])
-            <a href="{{ route('projects.tasks.create', $project) }}"
-               style="padding: 10px 15px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px;">
-                Nueva tarea
+        <div class="actions">
+            <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">
+                Volver al proyecto
             </a>
-        @endcan
+
+            @can('create', [\App\Models\Task::class, $project])
+                <a href="{{ route('projects.tasks.create', $project) }}" class="btn btn-success">
+                    Nueva tarea
+                </a>
+            @endcan
+        </div>
     </div>
 
-    <table style="width: 100%; border-collapse: collapse; background: white;">
-        <thead>
-            <tr style="background: #f3f4f6;">
-                <th style="border: 1px solid #ddd; padding: 10px;">ID</th>
-                <th style="border: 1px solid #ddd; padding: 10px;">Título</th>
-                <th style="border: 1px solid #ddd; padding: 10px;">Estado</th>
-                <th style="border: 1px solid #ddd; padding: 10px;">Fecha límite</th>
-                <th style="border: 1px solid #ddd; padding: 10px;">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($tasks as $task)
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 10px;">{{ $task->id }}</td>
-                    <td style="border: 1px solid #ddd; padding: 10px;">{{ $task->titulo }}</td>
-                    <td style="border: 1px solid #ddd; padding: 10px;">
-                        {{ str_replace('_', ' ', ucfirst($task->estado)) }}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 10px;">
-                        {{ $task->fecha_limite ? $task->fecha_limite->format('d/m/Y') : 'Sin fecha' }}
-                    </td>
-                    <td style="border: 1px solid #ddd; padding: 10px;">
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            @can('view', $task)
-                                <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-                                   style="padding: 7px 10px; background: #0f766e; color: white; text-decoration: none; border-radius: 6px;">
-                                    Ver
-                                </a>
-                            @endcan
+    <div class="page-card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Estado</th>
+                        <th>Fecha límite</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
 
-                            @can('update', $task)
-                                <a href="{{ route('projects.tasks.edit', [$project, $task]) }}"
-                                   style="padding: 7px 10px; background: #ca8a04; color: white; text-decoration: none; border-radius: 6px;">
-                                    Editar
-                                </a>
-                            @endcan
+                <tbody>
+                    @forelse ($tasks as $task)
+                        @php
+                            $estado = $task->estado ?? 'sin_estado';
 
-                            @can('delete', $task)
-                                <form action="{{ route('projects.tasks.destroy', [$project, $task]) }}"
-                                      method="POST"
-                                      onsubmit="return confirm('¿Seguro que deseas eliminar esta tarea?');">
-                                    @csrf
-                                    @method('DELETE')
+                            $badgeClass = match($estado) {
+                                'pendiente' => 'badge-yellow',
+                                'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
+                                'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
+                                'cancelada', 'cancelado' => 'badge-red',
+                                default => 'badge-blue',
+                            };
 
-                                    <button type="submit"
-                                            style="padding: 7px 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                        Eliminar
-                                    </button>
-                                </form>
-                            @endcan
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" style="border: 1px solid #ddd; padding: 15px; text-align: center;">
-                        No hay tareas registradas para este proyecto.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+                            $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+                        @endphp
 
-    <div style="margin-top: 20px;">
-        {{ $tasks->links() }}
+                        <tr>
+                            <td>{{ $task->id }}</td>
+
+                            <td>
+                                <strong>{{ $task->titulo ?? 'Sin título' }}</strong>
+                            </td>
+
+                            <td>
+                                <span class="badge {{ $badgeClass }}">
+                                    {{ $estadoTexto }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('d/m/Y') : 'Sin fecha' }}
+                            </td>
+
+                            <td>
+                                <div class="actions">
+                                    @can('view', $task)
+                                        <a href="{{ route('projects.tasks.show', [$project, $task]) }}" class="btn btn-primary">
+                                            Ver
+                                        </a>
+                                    @endcan
+
+                                    @can('update', $task)
+                                        <a href="{{ route('projects.tasks.edit', [$project, $task]) }}" class="btn btn-warning">
+                                            Editar
+                                        </a>
+                                    @endcan
+
+                                    @can('delete', $task)
+                                        <form action="{{ route('projects.tasks.destroy', [$project, $task]) }}"
+                                              method="POST"
+                                              data-confirm-delete="true"
+                                              data-confirm-message="¿Seguro que deseas eliminar esta tarea?">
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button type="submit" class="btn btn-danger">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5">
+                                No hay tareas registradas para este proyecto.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px;">
+            {{ $tasks->links() }}
+        </div>
     </div>
-</div>
 @endsection

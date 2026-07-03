@@ -3,48 +3,85 @@
 @section('title', 'Editar rol')
 
 @section('content')
-    <div class="card">
-        <h1>Cambiar rol de usuario</h1>
+    <div class="page-card">
+        <h1 class="page-title">Cambiar rol de usuario</h1>
+
+        <p class="page-subtitle">
+            Desde esta pantalla puedes asignar un rol al usuario seleccionado.
+        </p>
 
         <p>
-            Usuario:
-            <strong>{{ $user->name }}</strong>
-            |
+            <strong>Usuario:</strong>
+            {{ $user->name }}
+        </p>
+
+        <p style="margin-top: 8px;">
+            <strong>Correo:</strong>
             {{ $user->email }}
         </p>
 
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <p style="margin-top: 8px;">
+            <strong>Rol actual:</strong>
 
+            @forelse ($user->roles as $role)
+                @php
+                    $roleClass = match($role->name) {
+                        'admin' => 'badge-red',
+                        'lider' => 'badge-blue',
+                        'colaborador' => 'badge-green',
+                        'invitado' => 'badge-yellow',
+                        default => 'badge-blue',
+                    };
+                @endphp
+
+                <span class="badge {{ $roleClass }}">
+                    {{ ucfirst($role->name) }}
+                </span>
+            @empty
+                <span class="badge badge-yellow">
+                    Sin rol
+                </span>
+            @endforelse
+        </p>
+    </div>
+
+    <div class="page-card">
         <form action="{{ route('admin.users.update', $user) }}" method="POST">
             @csrf
             @method('PUT')
 
-            <div class="form-group">
-                <label>Rol</label>
+            <div>
+                <label for="role">Nuevo rol</label>
 
-                <select name="role" required>
+                <select name="role" id="role" required>
                     @foreach ($roles as $role)
                         <option value="{{ $role->name }}"
-                            @selected($user->hasRole($role->name))>
-                            {{ $role->name }}
+                            @selected(old('role', $user->roles->first()?->name) === $role->name)>
+                            {{ ucfirst($role->name) }}
                         </option>
                     @endforeach
                 </select>
+
+                @error('role')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
             </div>
 
-            <button type="submit">Guardar rol</button>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                    Guardar rol
+                </button>
 
-            <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
-                Cancelar
-            </a>
+                <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+
+                <a href="{{ route('dashboard') }}" class="btn btn-dark">
+                    Volver al dashboard
+                </a>
+            </div>
         </form>
     </div>
 @endsection

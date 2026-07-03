@@ -1,163 +1,180 @@
 @extends('layouts.app')
 
+@section('title', 'Detalle de tarea')
+
 @section('content')
-<div style="max-width: 900px; margin: 30px auto;">
-    <h1>Detalle de tarea</h1>
+    @php
+        $estado = $task->estado ?? 'sin_estado';
 
-    @if (session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-            {{ session('success') }}
-        </div>
-    @endif
+        $badgeClass = match($estado) {
+            'pendiente' => 'badge-yellow',
+            'en_proceso', 'en proceso', 'proceso' => 'badge-blue',
+            'completada', 'completado', 'finalizada', 'finalizado' => 'badge-green',
+            'cancelada', 'cancelado' => 'badge-red',
+            default => 'badge-blue',
+        };
 
-    <div style="background: white; border: 1px solid #ddd; border-radius: 10px; padding: 20px;">
+        $estadoTexto = ucfirst(str_replace('_', ' ', $estado));
+    @endphp
+
+    <div class="page-card">
+        <h1 class="page-title">Detalle de tarea</h1>
+
+        <p class="page-subtitle">
+            Información completa de la tarea seleccionada.
+        </p>
+
         <p>
             <strong>Proyecto:</strong>
             {{ $project->nombre ?? ('Proyecto #' . $project->id) }}
         </p>
 
-        <p>
+        <p style="margin-top: 12px;">
             <strong>Título:</strong>
-            {{ $task->titulo }}
+            {{ $task->titulo ?? 'Sin título' }}
         </p>
 
-        <p>
+        <p style="margin-top: 12px;">
             <strong>Descripción:</strong><br>
             {{ $task->descripcion ?: 'Sin descripción' }}
         </p>
 
-        <p>
+        <p style="margin-top: 12px;">
             <strong>Estado:</strong>
-            {{ str_replace('_', ' ', ucfirst($task->estado)) }}
+            <span class="badge {{ $badgeClass }}">
+                {{ $estadoTexto }}
+            </span>
         </p>
 
-        <p>
+        <p style="margin-top: 12px;">
             <strong>Fecha límite:</strong>
-            {{ $task->fecha_limite ? $task->fecha_limite->format('d/m/Y') : 'Sin fecha' }}
+            {{ $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('d/m/Y') : 'Sin fecha' }}
         </p>
-    </div>
 
-    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <a href="{{ route('projects.tasks.index', $project) }}"
-           style="padding: 10px 15px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px;">
-            Volver a tareas
-        </a>
-
-        @can('update', $task)
-            <a href="{{ route('projects.tasks.edit', [$project, $task]) }}"
-               style="padding: 10px 15px; background: #ca8a04; color: white; text-decoration: none; border-radius: 8px;">
-                Editar tarea
+        <div class="actions" style="margin-top: 18px;">
+            <a href="{{ route('projects.tasks.index', $project) }}" class="btn btn-secondary">
+                Volver a tareas
             </a>
-        @endcan
 
-        @can('delete', $task)
-            <form action="{{ route('projects.tasks.destroy', [$project, $task]) }}"
-                  method="POST"
-                  onsubmit="return confirm('¿Seguro que deseas eliminar esta tarea?');">
-                @csrf
-                @method('DELETE')
+            @can('update', $task)
+                <a href="{{ route('projects.tasks.edit', [$project, $task]) }}" class="btn btn-warning">
+                    Editar tarea
+                </a>
+            @endcan
 
-                <button type="submit"
-                        style="padding: 10px 15px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    Eliminar tarea
-                </button>
-            </form>
-        @endcan
+            @can('delete', $task)
+                <form action="{{ route('projects.tasks.destroy', [$project, $task]) }}"
+                      method="POST"
+                      data-confirm-delete="true"
+                      data-confirm-message="¿Seguro que deseas eliminar esta tarea?">
+                    @csrf
+                    @method('DELETE')
+
+                    <button type="submit" class="btn btn-danger">
+                        Eliminar tarea
+                    </button>
+                </form>
+            @endcan
+        </div>
     </div>
 
-    <div style="background: white; border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-top: 25px;">
+    <div class="page-card">
         <h2>Comentarios</h2>
+
+        <p class="page-subtitle">
+            Comentarios registrados para esta tarea.
+        </p>
 
         @can('create', [\App\Models\Comment::class, $task])
             <form action="{{ route('projects.tasks.comments.store', [$project, $task]) }}" method="POST" style="margin-bottom: 25px;">
                 @csrf
 
-                <div style="margin-bottom: 12px;">
+                <div>
                     <label for="cuerpo">Nuevo comentario</label>
+
                     <textarea name="cuerpo"
                               id="cuerpo"
                               rows="4"
-                              style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px;"
                               required>{{ old('cuerpo') }}</textarea>
+
+                    @error('cuerpo')
+                        <div class="form-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
                 </div>
 
-                @error('cuerpo')
-                    <div style="background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-                        {{ $message }}
-                    </div>
-                @enderror
-
-                <button type="submit"
-                        style="padding: 10px 15px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                <button type="submit" class="btn btn-primary">
                     Guardar comentario
                 </button>
             </form>
         @endcan
 
         @if ($task->comments->count() > 0)
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: #f3f4f6;">
-                        <th style="border: 1px solid #ddd; padding: 10px;">Usuario</th>
-                        <th style="border: 1px solid #ddd; padding: 10px;">Comentario</th>
-                        <th style="border: 1px solid #ddd; padding: 10px;">Fecha</th>
-                        <th style="border: 1px solid #ddd; padding: 10px;">Acciones</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach ($task->comments as $comment)
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <td style="border: 1px solid #ddd; padding: 10px;">
-                                {{ $comment->user->name ?? 'Usuario eliminado' }}
-                            </td>
-
-                            <td style="border: 1px solid #ddd; padding: 10px;">
-                                {{ $comment->cuerpo }}
-                            </td>
-
-                            <td style="border: 1px solid #ddd; padding: 10px;">
-                                {{ $comment->created_at?->format('d/m/Y H:i') }}
-                            </td>
-
-                            <td style="border: 1px solid #ddd; padding: 10px;">
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    @can('view', $comment)
-                                        <a href="{{ route('projects.tasks.comments.show', [$project, $task, $comment]) }}"
-                                           style="padding: 7px 10px; background: #0f766e; color: white; text-decoration: none; border-radius: 6px;">
-                                            Ver
-                                        </a>
-                                    @endcan
-
-                                    @can('update', $comment)
-                                        <a href="{{ route('projects.tasks.comments.edit', [$project, $task, $comment]) }}"
-                                           style="padding: 7px 10px; background: #ca8a04; color: white; text-decoration: none; border-radius: 6px;">
-                                            Editar
-                                        </a>
-                                    @endcan
-
-                                    @can('delete', $comment)
-                                        <form action="{{ route('projects.tasks.comments.destroy', [$project, $task, $comment]) }}"
-                                              method="POST"
-                                              onsubmit="return confirm('¿Seguro que deseas eliminar este comentario?');">
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button type="submit"
-                                                    style="padding: 7px 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                                                Eliminar
-                                            </button>
-                                        </form>
-                                    @endcan
-                                </div>
-                            </td>
+                            <th>Usuario</th>
+                            <th>Comentario</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+                        @foreach ($task->comments as $comment)
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ $comment->user->name ?? 'Usuario eliminado' }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    {{ $comment->cuerpo }}
+                                </td>
+
+                                <td>
+                                    {{ $comment->created_at?->format('d/m/Y H:i') }}
+                                </td>
+
+                                <td>
+                                    <div class="actions">
+                                        @can('view', $comment)
+                                            <a href="{{ route('projects.tasks.comments.show', [$project, $task, $comment]) }}" class="btn btn-primary">
+                                                Ver
+                                            </a>
+                                        @endcan
+
+                                        @can('update', $comment)
+                                            <a href="{{ route('projects.tasks.comments.edit', [$project, $task, $comment]) }}" class="btn btn-warning">
+                                                Editar
+                                            </a>
+                                        @endcan
+
+                                        @can('delete', $comment)
+                                            <form action="{{ route('projects.tasks.comments.destroy', [$project, $task, $comment]) }}"
+                                                  method="POST"
+                                                  data-confirm-delete="true"
+                                                  data-confirm-message="¿Seguro que deseas eliminar este comentario?">
+                                                @csrf
+                                                @method('DELETE')
+
+                                                <button type="submit" class="btn btn-danger">
+                                                    Eliminar
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         @else
             <p>Esta tarea todavía no tiene comentarios.</p>
         @endif
     </div>
-</div>
 @endsection

@@ -1,87 +1,108 @@
 @extends('layouts.app')
 
+@section('title', 'Editar tarea')
+
 @section('content')
-<div style="max-width: 800px; margin: 30px auto;">
-    <h1>Editar tarea</h1>
+    <div class="page-card">
+        <h1 class="page-title">Editar tarea</h1>
 
-    <p>
-        <strong>Proyecto:</strong>
-        {{ $project->nombre ?? $project->titulo ?? $project->name ?? ('Proyecto #' . $project->id) }}
-    </p>
+        <p class="page-subtitle">
+            Modifica los datos de la tarea seleccionada.
+        </p>
 
-    @if ($errors->any())
-        <div style="background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-            <strong>Corrige los siguientes errores:</strong>
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+        <p>
+            <strong>Proyecto:</strong>
+            {{ $project->nombre ?? $project->titulo ?? $project->name ?? ('Proyecto #' . $project->id) }}
+        </p>
+    </div>
 
-    <form action="{{ route('projects.tasks.update', [$project, $task]) }}" method="POST">
-        @csrf
-        @method('PUT')
+    <div class="page-card">
+        <form action="{{ route('projects.tasks.update', [$project, $task]) }}" method="POST">
+            @csrf
+            @method('PUT')
 
-        <div style="margin-bottom: 15px;">
-            <label for="titulo">Título</label>
-            <input type="text"
-                   name="titulo"
-                   id="titulo"
-                   value="{{ old('titulo', $task->titulo) }}"
-                   style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px;"
-                   required>
-        </div>
+            <div>
+                <label for="titulo">Título</label>
 
-        <div style="margin-bottom: 15px;">
-            <label for="descripcion">Descripción</label>
-            <textarea name="descripcion"
-                      id="descripcion"
-                      rows="5"
-                      style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">{{ old('descripcion', $task->descripcion) }}</textarea>
-        </div>
+                <input type="text"
+                       name="titulo"
+                       id="titulo"
+                       value="{{ old('titulo', $task->titulo) }}"
+                       required>
 
-        <div style="margin-bottom: 15px;">
-            <label for="estado">Estado</label>
-            <select name="estado"
-                    id="estado"
-                    style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px;"
-                    required>
-                <option value="pendiente" @selected(old('estado', $task->estado) === 'pendiente')>
-                Pendiente
-                </option>
+                @error('titulo')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
 
-                <option value="en_proceso" @selected(old('estado', $task->estado) === 'en_proceso')>
-                En proceso
-                </option>
+            <div>
+                <label for="descripcion">Descripción</label>
 
-                <option value="completada" @selected(old('estado', $task->estado) === 'completada')>
-                Completada
-                </option>
-            </select>
-        </div>
+                <textarea name="descripcion"
+                          id="descripcion"
+                          rows="5">{{ old('descripcion', $task->descripcion) }}</textarea>
 
-        <div style="margin-bottom: 15px;">
-            <label for="fecha_limite">Fecha límite</label>
-            <input type="date"
-                   name="fecha_limite"
-                   id="fecha_limite"
-                   value="{{ old('fecha_limite', $task->fecha_limite ? $task->fecha_limite->format('Y-m-d') : '') }}"
-                   style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-        </div>
+                @error('descripcion')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
 
-        <div style="display: flex; gap: 10px;">
-            <button type="submit"
-                    style="padding: 10px 15px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                Actualizar tarea
-            </button>
+            <div>
+                <label for="estado">Estado</label>
 
-            <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-               style="padding: 10px 15px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px;">
-                Cancelar
-            </a>
-        </div>
-    </form>
-</div>
+                <select name="estado" id="estado" required>
+                    <option value="pendiente" @selected(old('estado', $task->estado) === 'pendiente')>
+                        Pendiente
+                    </option>
+
+                    <option value="en_proceso" @selected(old('estado', $task->estado) === 'en_proceso')>
+                        En proceso
+                    </option>
+
+                    <option value="completada" @selected(old('estado', $task->estado) === 'completada')>
+                        Completada
+                    </option>
+                </select>
+
+                @error('estado')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
+
+            <div>
+                <label for="fecha_limite">Fecha límite</label>
+
+                <input type="date"
+                       name="fecha_limite"
+                       id="fecha_limite"
+                       value="{{ old('fecha_limite', $task->fecha_limite ? \Illuminate\Support\Carbon::parse($task->fecha_limite)->format('Y-m-d') : '') }}">
+
+                @error('fecha_limite')
+                    <div class="form-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                    Actualizar tarea
+                </button>
+
+                <a href="{{ route('projects.tasks.show', [$project, $task]) }}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+
+                <a href="{{ route('projects.tasks.index', $project) }}" class="btn btn-dark">
+                    Volver a tareas
+                </a>
+            </div>
+        </form>
+    </div>
 @endsection
