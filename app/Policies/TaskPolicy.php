@@ -2,50 +2,89 @@
 
 namespace App\Policies;
 
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Throwable;
 
 class TaskPolicy
 {
     public function before(User $user, string $ability): bool|null
     {
-        if ($user->hasRole('admin')) {
+        if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
             return true;
         }
 
         return null;
     }
 
-    public function viewAny(User $user): bool
+    public function viewAny(User $user, ?Project $project = null): bool
     {
-        return $user->can('tasks.view');
+        if (! $this->hasPermission($user, [
+            'tasks.view',
+            'tasks.index',
+            'view tasks',
+        ])) {
+            return false;
+        }
+
+        if (! $project) {
+            return true;
+        }
+
+        return $this->canAccessProject($user, $project);
     }
 
     public function view(User $user, Task $task): bool
     {
-        return $user->can('tasks.view') && $this->belongsToTaskProject($user, $task);
+        if (! $this->hasPermission($user, [
+            'tasks.view',
+            'tasks.show',
+            'view tasks',
+        ])) {
+            return false;
+        }
+
+        return $task->project && $this->canAccessProject($user, $task->project);
     }
 
-    public function create(User $user): bool
+    public function create(User $user, Project $project): bool
     {
-        return $user->can('tasks.create');
+        if (! $this->hasPermission($user, [
+            'tasks.create',
+            'create tasks',
+        ])) {
+            return false;
+        }
+
+        return $this->canAccessProject($user, $project);
     }
 
     public function update(User $user, Task $task): bool
     {
-        return $user->can('tasks.update') && (
-            $user->hasRole('lider') ||
-            $this->ownsTask($user, $task) ||
-            $this->belongsToTaskProject($user, $task)
-        );
+        if (! $this->hasPermission($user, [
+            'tasks.update',
+            'tasks.edit',
+            'edit tasks',
+            'update tasks',
+        ])) {
+            return false;
+        }
+
+        return $task->project && $this->canAccessProject($user, $task->project);
     }
 
     public function delete(User $user, Task $task): bool
     {
-        return $user->can('tasks.delete') && (
-            $user->hasRole('lider') ||
-            $this->ownsTask($user, $task)
-        );
+        if (! $this->hasPermission($user, [
+            'tasks.delete',
+            'tasks.destroy',
+            'delete tasks',
+        ])) {
+            return false;
+        }
+
+        return $task->project && $this->canAccessProject($user, $task->project);
     }
 
     public function restore(User $user, Task $task): bool
@@ -58,39 +97,39 @@ class TaskPolicy
         return false;
     }
 
-    private function ownsTask(User $user, Task $task): bool
+    private function canAccessProject(User $user, Project $project): bool
     {
-        return ! is_null($task->getAttribute('user_id'))
-            && (int) $task->getAttribute('user_id') === (int) $user->id;
-    }
-
-    private function belongsToTaskProject(User $user, Task $task): bool
-    {
-        if ($this->ownsTask($user, $task)) {
+        if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
             return true;
         }
 
-        if (! method_exists($task, 'project')) {
-            return false;
-        }
-
-        $project = $task->project;
-
-        if (! $project) {
-            return false;
-        }
-
-        if (! is_null($project->getAttribute('user_id'))
-            && (int) $project->getAttribute('user_id') === (int) $user->id) {
+        if (isset($project->owner_id) && (int) $project->owner_id === (int) $user->id) {
             return true;
         }
 
         if (method_exists($project, 'members')) {
-            return $project->members()
-                ->where('users.id', $user->id)
-                ->exists();
+            try {
+                return $project->members()
+                    ->where('users.id', $user->id)
+                    ->exists();
+            } catch (Throwable $e) {
+                return false;
+            }
         }
 
         return false;
+    }
+
+    private function hasPermission(User $user, array $permissions): bool
+    {
+        if (! method_exists($user, 'hasAnyPermission')) {
+            return false;
+        }
+
+        try {
+            return $user->hasAnyPermission($permissions);
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 }

@@ -45,6 +45,12 @@
                                 </a>
                             @endcan
 
+                            @can('viewAny', [\App\Models\Task::class, $project])
+                                <a href="{{ route('projects.tasks.index', $project) }}" class="btn">
+                                    Tareas
+                                </a>
+                            @endcan
+
                             @can('update', $project)
                                 <a href="{{ route('projects.edit', $project) }}" class="btn btn-secondary">
                                     Editar
