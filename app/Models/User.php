@@ -3,14 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
         'name',
@@ -33,19 +34,17 @@ class User extends Authenticatable
 
     public function ownedProjects(): HasMany
     {
-        return $this->hasMany(Project::class, 'owner_id');
+        return $this->hasMany(Project::class);
     }
 
     public function projects(): BelongsToMany
     {
-        return $this->belongsToMany(Project::class)
-            ->withPivot('project_role')
-            ->withTimestamps();
+        return $this->belongsToMany(Project::class)->withTimestamps();
     }
 
-    public function assignedTasks(): HasMany
+    public function tasks(): HasMany
     {
-        return $this->hasMany(Task::class, 'assignee_id');
+        return $this->hasMany(Task::class);
     }
 
     public function comments(): HasMany

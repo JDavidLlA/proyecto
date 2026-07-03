@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -22,20 +21,12 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
-        ], [
-            'email.required' => 'El correo es obligatorio.',
-            'email.email' => 'Ingrese un correo válido.',
-            'password.required' => 'La contraseña es obligatoria.',
         ]);
 
-        $remember = $request->boolean('remember');
-
-        if (Auth::attempt($credentials, $remember)) {
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            return redirect()
-                ->intended(route('dashboard'))
-                ->with('success', 'Inicio de sesión correcto.');
+            return redirect()->intended(route('dashboard'));
         }
 
         return back()
@@ -55,25 +46,18 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
-        ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El correo es obligatorio.',
-            'email.email' => 'Ingrese un correo válido.',
-            'email.unique' => 'Este correo ya está registrado.',
-            'password.required' => 'La contraseña es obligatoria.',
-            'password.confirmed' => 'La confirmación de contraseña no coincide.',
+            'password' => ['required', 'confirmed', 'min:6'],
         ]);
 
         $user = User::create($data);
+
+        $user->assignRole('colaborador');
 
         Auth::login($user);
 
         $request->session()->regenerate();
 
-        return redirect()
-            ->route('dashboard')
-            ->with('success', 'Cuenta creada correctamente.');
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request): RedirectResponse
@@ -83,8 +67,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()
-            ->route('login')
-            ->with('success', 'Sesión cerrada correctamente.');
+        return redirect()->route('login');
     }
 }

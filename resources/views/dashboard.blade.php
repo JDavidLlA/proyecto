@@ -1,64 +1,59 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard - Gestor')
+@section('title', 'Dashboard')
 
 @section('content')
     <div class="card">
-        <h1>Panel principal</h1>
-        <p>Bienvenido, <strong>{{ auth()->user()->name }}</strong>.</p>
-        <p>Este panel solo es visible para usuarios autenticados.</p>
-    </div>
+        <h1>Dashboard privado</h1>
 
-    <div class="grid">
-        <div class="stat">
-            <h3>Usuarios</h3>
-            <p>{{ $totalUsers }}</p>
-        </div>
+        <p>
+            Bienvenido, <strong>{{ auth()->user()->name }}</strong>.
+        </p>
 
-        <div class="stat">
-            <h3>Proyectos</h3>
-            <p>{{ $totalProjects }}</p>
-        </div>
-
-        <div class="stat">
-            <h3>Tareas</h3>
-            <p>{{ $totalTasks }}</p>
-        </div>
-
-        <div class="stat">
-            <h3>Comentarios</h3>
-            <p>{{ $totalComments }}</p>
-        </div>
+        <p>
+            Rol actual:
+            <strong>{{ auth()->user()->getRoleNames()->join(', ') }}</strong>
+        </p>
     </div>
 
     <div class="card">
-        <h2>Últimos proyectos</h2>
+        <h2>Controles por rol</h2>
 
-        @if ($latestProjects->count())
-            <table>
-                <thead>
-                    <tr>
-                        <th>Proyecto</th>
-                        <th>Estado</th>
-                        <th>Dueño</th>
-                        <th>Tareas</th>
-                        <th>Miembros</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($latestProjects as $project)
-                        <tr>
-                            <td>{{ $project->nombre }}</td>
-                            <td>{{ ucfirst($project->estado) }}</td>
-                            <td>{{ $project->owner->name ?? 'Sin dueño' }}</td>
-                            <td>{{ $project->tasks_count }}</td>
-                            <td>{{ $project->members_count }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @else
-            <p>No hay proyectos registrados.</p>
-        @endif
+        @role('admin')
+            <p>Estás viendo este bloque porque eres administrador.</p>
+            <a href="{{ route('admin.users.index') }}" class="btn">Administrar usuarios</a>
+        @endrole
+
+        @role('lider')
+            <p>Estás viendo este bloque porque eres líder de proyecto.</p>
+        @endrole
+
+        @role('colaborador')
+            <p>Estás viendo este bloque porque eres colaborador.</p>
+        @endrole
+
+        @role('invitado')
+            <p>Estás viendo este bloque porque eres invitado.</p>
+        @endrole
+    </div>
+
+    <div class="card">
+        <h2>Controles por permisos</h2>
+
+        @can('projects.create')
+            <a href="#" class="btn">Crear proyecto</a>
+        @endcan
+
+        @can('tasks.create')
+            <a href="#" class="btn">Crear tarea</a>
+        @endcan
+
+        @can('comments.create')
+            <a href="#" class="btn">Crear comentario</a>
+        @endcan
+
+        @cannot('users.update_roles')
+            <p>No tienes permiso para cambiar roles de usuarios.</p>
+        @endcannot
     </div>
 @endsection

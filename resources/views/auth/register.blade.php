@@ -1,71 +1,50 @@
 @extends('layouts.app')
 
-@section('title', 'Registro - Gestor')
+@section('title', 'Registro')
 
 @section('content')
-    <div class="form-box">
-        <h1>Crear cuenta</h1>
-        <p>Registra un nuevo usuario en Gestor.</p>
+    <div class="card">
+        <h1>Registro</h1>
 
         @if ($errors->any())
-            <div class="alert-error">
-                Revise los datos ingresados.
+            <div class="alert alert-danger">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
         @endif
 
-        <form action="{{ route('register.store') }}" method="POST">
+        <form action="{{ route('register.post') }}" method="POST">
             @csrf
 
-            <label for="name">Nombre</label>
-            <input
-                type="text"
-                name="name"
-                id="name"
-                value="{{ old('name') }}"
-                required
-                autofocus
-            >
-            @error('name')
-                <div class="alert-error">{{ $message }}</div>
-            @enderror
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" name="name" value="{{ old('name') }}" required>
+            </div>
 
-            <label for="email">Correo electrónico</label>
-            <input
-                type="email"
-                name="email"
-                id="email"
-                value="{{ old('email') }}"
-                required
-            >
-            @error('email')
-                <div class="alert-error">{{ $message }}</div>
-            @enderror
+            <div class="form-group">
+                <label>Correo electrónico</label>
+                <input type="email" name="email" value="{{ old('email') }}" required>
+            </div>
 
-            <label for="password">Contraseña</label>
-            <input
-                type="password"
-                name="password"
-                id="password"
-                required
-            >
-            @error('password')
-                <div class="alert-error">{{ $message }}</div>
-            @enderror
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" required>
+            </div>
 
-            <label for="password_confirmation">Confirmar contraseña</label>
-            <input
-                type="password"
-                name="password_confirmation"
-                id="password_confirmation"
-                required
-            >
+            <div class="form-group">
+                <label>Confirmar contraseña</label>
+                <input type="password" name="password_confirmation" required>
+            </div>
 
-            <button class="btn" type="submit">Registrarme</button>
+            <button type="submit">Crear cuenta</button>
         </form>
 
         <p>
             ¿Ya tienes cuenta?
-            <a class="link" href="{{ route('login') }}">Inicia sesión</a>
+            <a href="{{ route('login') }}">Iniciar sesión</a>
         </p>
     </div>
 @endsection
